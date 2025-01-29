@@ -50,6 +50,14 @@ const WeightLossPredictor = () => {
     extremelyActive: 1.9,
   };
 
+  const activityDescriptions = {
+    sedentary: "🚶 Sedentary: Little to No Exercise. Less than 30 minutes/day or under 2 hours/week.",
+    lightlyActive: "🏃 Lightly Active: Light exercise 1-3 days/week. Around 30-60 minutes/session.",
+    moderatelyActive: "💪 Moderately Active: Moderate exercise 3-5 days/week. Totals 3-7 hours/week.",
+    veryActive: "🏋️ Very Active: Intense exercise 6-7 days/week. At least 7-10 hours/week.",
+    extremelyActive: "🔥 Extremely Active: Hard training or physically demanding job. More than 10-12 hours/week.",
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -104,7 +112,6 @@ const WeightLossPredictor = () => {
     return Object.keys(stepErrors).length === 0;
   };
 
-
   const calculateResults = () => {
     const { currentWeight, height, age, gender, activityLevel, weightLossGoal, weeks } = formData;
     const weight = unitSystem === "metric" ? parseFloat(currentWeight) : parseFloat(currentWeight) * 0.45359;
@@ -120,12 +127,19 @@ const WeightLossPredictor = () => {
     const totalCalorieDeficit = parseFloat(weightLossGoal) * 3500;
     const dailyCalorieDeficit = totalCalorieDeficit / (parseFloat(weeks) * 7);
 
-    const dailyCalories = TDEE - dailyCalorieDeficit;
+    const dailyCalories = Math.max(
+      TDEE - dailyCalorieDeficit,
+      gender === "male" ? 1500 : 1200
+    );
+
+    const trimTrailingZeros = (num) => {
+      const trimmed = parseFloat(num.toFixed());
+      return Number.isInteger(trimmed) ? trimmed.toFixed(0) : trimmed.toString();
+    };
 
     return {
-      weeklyWeightLoss: (dailyCalorieDeficit * 7) / 3500,
-      dailyCalories: dailyCalories.toFixed(2),
-      timeToGoal: weeks,
+      weeklyWeightLoss: trimTrailingZeros((dailyCalorieDeficit * 7) / 3500),
+      dailyCalories: Math.round(dailyCalories),
     };
   };
 
@@ -134,7 +148,6 @@ const WeightLossPredictor = () => {
       setStep(step + 1);
     }
   };
-
 
   const handleReset = () => {
     setFormData({
@@ -148,7 +161,7 @@ const WeightLossPredictor = () => {
     });
     setStep(1);
   };
-  console.log(step)
+
   const renderStep = () => {
     switch (step) {
       case 1:
@@ -241,18 +254,18 @@ const WeightLossPredictor = () => {
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <FormControl fullWidth margin="normal" error={!!errors.activityLevel}>
-              <InputLabel>Activity Level</InputLabel>
+              <InputLabel id="demo-simple-select-label">Activity Level</InputLabel>
               <Select
+                labelId="demo-simple-select-label"
+                id="demo-simple-select"
+                label="Activity Level"
                 name="activityLevel"
                 value={formData.activityLevel}
                 onChange={handleInputChange}
               >
-                <MenuItem value="">Choose an option</MenuItem>
-                <MenuItem value="sedentary">Sedentary</MenuItem>
-                <MenuItem value="lightlyActive">Lightly Active</MenuItem>
-                <MenuItem value="moderatelyActive">Moderately Active</MenuItem>
-                <MenuItem value="veryActive">Very Active</MenuItem>
-                <MenuItem value="extremelyActive">Extremely Active</MenuItem>
+                {Object.keys(activityDescriptions).map((level) => (
+                  <MenuItem key={level} value={level}>{activityDescriptions[level]}</MenuItem>
+                ))}
               </Select>
               {errors.activityLevel && <Typography color="error">{errors.activityLevel}</Typography>}
             </FormControl>
@@ -324,18 +337,18 @@ const WeightLossPredictor = () => {
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <Box sx={{ padding: 2 }}>
-              <Typography variant="h4" align="center" gutterBottom>
+              <Typography variant="h5" align="center" gutterBottom>
                 Your Results
               </Typography>
               <Divider sx={{ marginBottom: 2 }} />
               <Typography variant="body1" sx={{ marginBottom: 2 }}>
-                <strong>Weekly Caloric Deficit:</strong> {parseFloat(results.weeklyWeightLoss).toFixed(2)} {unitSystem === "metric" ? "kg/week" : "lbs/week"}
+                <strong>Projected Weekly Weight Loss:</strong> {parseFloat(results.weeklyWeightLoss).toFixed(2)} {unitSystem === "metric" ? "kg/week" : "lbs/week"}
               </Typography>
               <Typography variant="body1" sx={{ marginBottom: 2 }}>
-                <strong>Daily Caloric Target:</strong> {parseFloat(results.dailyCalories).toFixed(2)} calories/day
+                <strong>Recommended Daily Calorie Intake:</strong> {results.dailyCalories} calories/day
               </Typography>
-              <Typography variant="body1" sx={{ marginBottom: 2 }}>
-                <strong>Estimated Time to Goal:</strong> {results.timeToGoal} weeks
+              <Typography variant="body2" color="textSecondary">
+                This tool provides estimates. Everyone's journey looks different and can fluctuate depending on many factors. For personalized advice, consult a healthcare provider or dietitian.
               </Typography>
               <Divider sx={{ marginY: 2 }} />
               <Button
